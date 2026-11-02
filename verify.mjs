@@ -3,10 +3,10 @@ import { chromium, webkit } from 'playwright'
 import { spawn, execFileSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { MUTE_LAUNCH, muteContext } from './mute.mjs'
-import { createWorld } from './shared/track.js?v=3'
-import { setupArena } from './shared/arena.js?v=3'
-import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=3'
-import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=3'
+import { createWorld } from './shared/track.js?v=4'
+import { setupArena } from './shared/arena.js?v=4'
+import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=4'
+import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=4'
 import { play } from './tools/sim.mjs'
 const ROOT = import.meta.dirname
 mkdirSync(ROOT + '/shots', { recursive: true })
@@ -315,6 +315,18 @@ await t('三兄弟に捕まると背中の風船が減り、兄弟の一言・�
     return { lives: tt.m.lives, icons: document.querySelectorAll('#lives i:not(.gone)').length, ev: !!tt.log.find(e => e.t === 'caught'), say: document.getElementById('say').textContent }
   })
   expect(r.lives === 2 && r.icons === 2 && r.ev && /次男|Mid bro/.test(r.say), JSON.stringify(r)); return r
+})
+await t('矢印は方角だけ: 兄弟が上にいても下にいても、同じ水平の位置なら矢印の向きは同じ・画面の下の真ん中', async () => {
+  const r = await p.evaluate(() => {
+    tt.start(9); tt.dbg.pause(true); const c = tt.m.chasers[2]
+    tt.dbg.sleepBros(true); c.awake = true; c.stun = 0
+    const out = []
+    for (const y of [0, 40]) { tt.dbg.teleport(0, 0, 680, 0); Object.assign(c.r, { x: 20, y, z: 650, vx: 0, vy: 0, vz: 0, grounded: y < 0.1, rope: null, climbing: null }); tt.m.immune = 99; tt.dbg.step(2); out.push(window.__compass && window.__compass.broArrow) }
+    const el = document.getElementById('broArrow').getBoundingClientRect()
+    tt.m.immune = 0; tt.dbg.sleepBros(true)
+    return { a0: out[0], a1: out[1], cx: Math.round(el.left + el.width / 2), W: innerWidth, bottom: Math.round(innerHeight - el.bottom), mode: tt.mode, lives: tt.m.lives, over: tt.m.over, hid: document.getElementById('broArrow').className }
+  })
+  expect(r.a0 != null && Math.abs(r.a0 - r.a1) < 0.02 && Math.abs(r.cx - r.W / 2) < 4, JSON.stringify(r)); return r
 })
 await t('時間で暗くなる（昼→夕方→夜）', async () => {
   const shots = []

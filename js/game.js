@@ -1,18 +1,18 @@
 // 空中風船割り。WIRE ESCAPE のワイヤーと街で、空に浮かぶ風船を飛び回って割りまくる（空中しっぽ取りのクローンから作り替え）
 // 2026-11-02 本人「ワイヤーで飛び回るのは気持ちいい。しっぽ取りは人には難しい。もっと爽快で気持ちいいものに」
 import * as THREE from 'three'
-import { GAME } from '../shared/config.js?v=3'
-import { createWorld } from '../shared/track.js?v=3'
-import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=3'
-import { buildScene } from './scene.js?v=3'
-import { FX } from './fx.js?v=3'
-import { loadSky, setAniso } from './look.js?v=3'
-import { Q } from './quality.js?v=3'
-import { RunnerModel } from './runnermodel.js?v=3'
-import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=3'
-import { createRunner, stepRunner, findAnchor, rayHit, RUN } from '../shared/runner.js?v=3'
-import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=3'
-import { createChaser, chaserInput } from '../shared/chaser.js?v=3'
+import { GAME } from '../shared/config.js?v=4'
+import { createWorld } from '../shared/track.js?v=4'
+import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=4'
+import { buildScene } from './scene.js?v=4'
+import { FX } from './fx.js?v=4'
+import { loadSky, setAniso } from './look.js?v=4'
+import { Q } from './quality.js?v=4'
+import { RunnerModel } from './runnermodel.js?v=4'
+import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=4'
+import { createRunner, stepRunner, findAnchor, rayHit, RUN } from '../shared/runner.js?v=4'
+import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=4'
+import { createChaser, chaserInput } from '../shared/chaser.js?v=4'
 
 const $ = id => document.getElementById(id)
 const STEP = GAME.step
@@ -433,33 +433,28 @@ function updateHud(dt) {
   if (!goal) { let gd = 1e9; for (const b of alive(m)) { const d = Math.hypot(b.x - r.x, b.z - r.z) - (b.gold ? 30 : 0); if (d < gd) { gd = d; goal = b } } }
   const ar = $('arrow')
   if (!goal) { ar.classList.add('hidden'); return }
-  const p = _v.set(goal.x, goal.y, goal.z).project(camera)
-  const W = innerWidth, H = innerHeight, behind = p.z > 1
-  let sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H
-  const off = behind || sx < 30 || sx > W - 30 || sy < 70 || sy > H - 30
-  if (!off) { ar.classList.add('hidden'); return }   // 見えている時は輪だけ
+  if (onScreen(goal.x, goal.y, goal.z)) { ar.classList.add('hidden'); return }   // 見えている時は輪だけ
   ar.classList.remove('hidden'); ar.style.setProperty('--c', goal.gold ? '#ffd34a' : '#fff')
   $('arrowD').textContent = Math.round(Math.hypot(goal.x - r.x, goal.z - r.z)) + 'm'
-  let dx = sx - W / 2, dy = sy - H / 2
-  if (behind) { dx = -dx; dy = -dy; if (Math.abs(dy) < 1) dy = H }
-  const k = Math.min((W / 2 - 40) / Math.abs(dx || 1e-6), (H / 2 - 90) / Math.abs(dy || 1e-6))
-  ar.style.left = (W / 2 + dx * k) + 'px'; ar.style.top = (H / 2 + dy * k) + 'px'
-  ar.querySelector('svg').style.transform = `rotate(${Math.atan2(dx, -dy)}rad)`
+  placeCompass(ar, compassAngle(goal.x, goal.z, r))
 }
+// 矢印は方角だけ（2026-11-03 本人「高さを表すと分かりづらい。方角だけでいい」）: カメラの前を上として、目標の水平の向きへ回す。画面の上の真ん中に固定
+function compassAngle(tx, tz, r) {
+  const e = camera.matrixWorld.elements
+  let rx = e[0], rz = e[2], fx = -e[8], fz = -e[10]; const a = Math.hypot(rx, rz) || 1, b = Math.hypot(fx, fz) || 1; rx /= a; rz /= a; fx /= b; fz /= b
+  const dx = tx - r.x, dz = tz - r.z
+  return Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz)
+}
+function onScreen(x, y, z) { const p = _v.set(x, y, z).project(camera), W = innerWidth, H = innerHeight; const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H; return p.z < 1 && sx > 30 && sx < W - 30 && sy > 70 && sy < H - 30 }
+function placeCompass(el, ang) { el.style.left = '50%'; el.style.top = ''; el.querySelector('svg').style.transform = `rotate(${ang}rad)`; window.__compass = window.__compass || {}; window.__compass[el.id] = ang }
+
 // 一番近い兄弟の向きと距離（画面の外なら赤い矢印。見えていれば頭の上に小さく）
 function broArrow() {
   const el = $('broArrow'), nc = nearestChaser(m)
   if (!nc || nc.d > 70 || nc.c.stun > 0) { el.classList.add('hidden'); return }
-  const p = _v.set(nc.c.r.x, nc.c.r.y + 2.6, nc.c.r.z).project(camera), W = innerWidth, H = innerHeight, behind = p.z > 1
-  let sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H
   el.classList.remove('hidden'); $('broD').textContent = Math.round(nc.d) + 'm'
   el.classList.toggle('close', nc.d < 18)
-  if (!behind && sx > 30 && sx < W - 30 && sy > 70 && sy < H - 30) { el.style.left = sx + 'px'; el.style.top = Math.max(80, sy - 26) + 'px'; el.querySelector('svg').style.transform = 'rotate(180deg)'; return }
-  let dx = sx - W / 2, dy = sy - H / 2
-  if (behind) { dx = -dx; dy = -dy; if (Math.abs(dy) < 1) dy = H }
-  const k = Math.min((W / 2 - 40) / Math.abs(dx || 1e-6), (H / 2 - 90) / Math.abs(dy || 1e-6))
-  el.style.left = (W / 2 + dx * k) + 'px'; el.style.top = (H / 2 + dy * k) + 'px'
-  el.querySelector('svg').style.transform = `rotate(${Math.atan2(dx, -dy)}rad)`
+  placeCompass(el, compassAngle(nc.c.r.x, nc.c.r.z, m.me))   // 兄弟は画面の下の真ん中（後ろから来ることが多い）
 }
 function fwdOf() { const e = camera.matrixWorld.elements, x = -e[8], z = -e[10], l = Math.hypot(x, z) || 1; return { x: x / l, z: z / l } }
 
