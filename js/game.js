@@ -1,18 +1,18 @@
 // 空中風船割り。WIRE ESCAPE のワイヤーと街で、空に浮かぶ風船を飛び回って割りまくる（空中しっぽ取りのクローンから作り替え）
 // 2026-11-02 本人「ワイヤーで飛び回るのは気持ちいい。しっぽ取りは人には難しい。もっと爽快で気持ちいいものに」
 import * as THREE from 'three'
-import { GAME } from '../shared/config.js?v=6'
-import { createWorld } from '../shared/track.js?v=6'
-import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=6'
-import { buildScene } from './scene.js?v=6'
-import { FX } from './fx.js?v=6'
-import { loadSky, setAniso } from './look.js?v=6'
-import { Q } from './quality.js?v=6'
-import { RunnerModel } from './runnermodel.js?v=6'
-import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=6'
-import { createRunner, stepRunner, findAnchor, rayHit, RUN } from '../shared/runner.js?v=6'
-import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=6'
-import { createChaser, chaserInput } from '../shared/chaser.js?v=6'
+import { GAME } from '../shared/config.js?v=7'
+import { createWorld } from '../shared/track.js?v=7'
+import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=7'
+import { buildScene } from './scene.js?v=7'
+import { FX } from './fx.js?v=7'
+import { loadSky, setAniso } from './look.js?v=7'
+import { Q } from './quality.js?v=7'
+import { RunnerModel } from './runnermodel.js?v=7'
+import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=7'
+import { createRunner, stepRunner, findAnchor, rayHit, floorAt, RUN } from '../shared/runner.js?v=7'
+import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=7'
+import { createChaser, chaserInput } from '../shared/chaser.js?v=7'
 
 const $ = id => document.getElementById(id)
 const STEP = GAME.step
@@ -26,7 +26,7 @@ const T = {
     start: 'はじめる', how: '遊び方', lang: 'EN', more: 'ほかのゲーム', muteOn: '音 入', muteOff: '音 切', loading: '風船をふくらませ中',
     howTitle: '遊び方', ok: 'わかった',
     howItems: [
-      '<b>大きいボタン</b>か建物・電柱を<b>タッチ</b>でワイヤー。もう一回で離す',
+      '<b>大きいボタン</b>か建物・電柱を<b>タッチ</b>でワイヤー。もう一回で離す。空中で<b>地面をタップ</b>すると地面に掛かって加速',
       '風船に<b>飛び込む</b>と割れる。割るたびに少し加速する',
       '怒った<b>風船屋の三兄弟</b>が追ってくる。捕まると背中の風船を1つ割られる。<b>2分</b>逃げきれば、残った風船がボーナス',
       '速く飛べば振り切れる。地面にいると追いつかれる。<b>金の風船</b>で背中の風船が1つ戻る'
@@ -56,7 +56,7 @@ const T = {
     start: 'Play', how: 'How to play', lang: 'JP', more: 'More games', muteOn: 'Sound on', muteOff: 'Muted', loading: 'Blowing up balloons',
     howTitle: 'How to play', ok: 'Got it',
     howItems: [
-      'The <b>big button</b> or <b>tapping</b> a building or pole fires the wire. Press again to let go',
+      'The <b>big button</b> or <b>tapping</b> a building or pole fires the wire. Press again to let go. In the air, <b>tap the ground</b> to zip toward it',
       '<b>Fly into</b> balloons to pop them. Every pop gives you a little speed',
       'The angry <b>balloon shop brothers</b> chase you. Get caught and they pop one of your 3 balloons. Last <b>2 minutes</b> for a bonus',
       'Fly fast to shake them off. On the ground they catch up. <b>Gold balloons</b> give one back'
@@ -294,6 +294,8 @@ addEventListener('keydown', e => {
 })
 addEventListener('keyup', e => keys.delete(e.code))
 const gest = new Map()
+// スワイプで見回す感度（2026-11-03 本人「ほんとにちょっとだけ高く」で約1.2倍: 0.006→0.0072 / 0.004→0.0048。ワイヤー系全部）
+const LOOK = { yaw: 0.0072, pitch: 0.0048 }
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2()
 renderer.domElement.addEventListener('pointerdown', e => {
   Snd.init()
@@ -305,7 +307,7 @@ addEventListener('pointermove', e => {
   const dx = e.clientX - g.lx, dy = e.clientY - g.ly; g.lx = e.clientX; g.ly = e.clientY
   if (!g.moved && Math.hypot(e.clientX - g.x, e.clientY - g.y) > 12) g.moved = true
   if (!g.moved) return
-  cam.hd -= dx * 0.006; cam.pitch = Math.max(-0.35, Math.min(1, cam.pitch + dy * 0.004)); cam.userT = performance.now()
+  cam.hd -= dx * LOOK.yaw; cam.pitch = Math.max(-0.35, Math.min(1, cam.pitch + dy * LOOK.pitch)); cam.userT = performance.now()
 })
 addEventListener('pointerup', e => {
   const g = gest.get(e.pointerId); if (!g) return
@@ -313,13 +315,25 @@ addEventListener('pointerup', e => {
   if (!g.moved && performance.now() - g.t < 450 && mode === 'play' && !paused) aimAt(e.clientX, e.clientY)
 })
 addEventListener('pointercancel', e => gest.delete(e.pointerId))
+// タップした所: 建物・電柱に当たればそこ（建物を優先）。当たった所が床（道・屋上）で自分より下なら地面ワイヤー、
+// 何にも当たらなければ道の面（高さ0）を見る。地面ワイヤーになるのは画面の地面をタップした時だけ（ボタン・自動の狙いでは絶対に掛けない）
+function tapTarget(o, d) {
+  const h = rayHit(world, o.x, o.y, o.z, d.x, d.y, d.z, 400)
+  const r = me() && me().r
+  if (h) {
+    if (!h.pole && r && h.y < r.y - 0.5 && Math.abs(floorAt(world, h.x, h.z, h.y + 0.2).h - h.y) < 0.15) return { ...h, ground: true }
+    return h
+  }
+  if (d.y < -0.02) { const t = -o.y / d.y; if (t > 0 && t < 400) return { x: o.x + d.x * t, y: 0, z: o.z + d.z * t, ground: true } }
+  return null
+}
 function aimAt(cx, cy) {
   const rc = renderer.domElement.getBoundingClientRect()
   ndc.set((cx - rc.left) / rc.width * 2 - 1, -((cy - rc.top) / rc.height) * 2 + 1)
   ray.setFromCamera(ndc, camera)
   const o = ray.ray.origin, d = ray.ray.direction
   // ワイヤー中でも狙った所があれば掛け直す（つなぎ）。何も無い所なら外すだけ
-  pendingWire = { at: rayHit(world, o.x, o.y, o.z, d.x, d.y, d.z, 400), sx: cx, sy: cy }
+  pendingWire = { at: tapTarget(o, d), sx: cx, sy: cy }
 }
 const stick = { x: 0, y: 0, id: null }
 {
@@ -469,6 +483,7 @@ function onRunnerEvent(e) {
     if (e.far && tp && tp.sx != null) { const el = $('miss'); el.style.left = tp.sx + 'px'; el.style.top = tp.sy + 'px'; el.classList.remove('hidden'); el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; clearTimeout(el._t); el._t = setTimeout(() => el.classList.add('hidden'), 800) }
   } else if (e.t === 'land') { sfx('land', { vol: Math.min(1, 0.3 + e.impact / 20) }); if (e.impact > 14) { sfx('bonk', { vol: 0.5 }); fx.addShake(Math.min(0.6, e.impact / 40)) } }
   else if (e.t === 'bonk') { sfx('bonk', { vol: 0.8 }); fx.addShake(0.4) }
+  else if (e.t === 'unwire' && e.ground) { sfx('whoosh', { vol: 0.7, rate: 1.05 }); fovKick = 7 }   // 地面ワイヤーが外れて跳ねる
   else if (e.t === 'unwire' && !e.auto) { const r = me().r, v = Math.hypot(r.vx, r.vy, r.vz); if (v > 16) { sfx('whoosh', { vol: Math.min(0.8, v / 50), rate: 0.9 + Math.random() * 0.2 }); fovKick = Math.min(6, (v - 16) * 0.3) } }   // 速く離すと風を切る
 }
 function onGameEvent(e) {
@@ -756,13 +771,13 @@ function render(dt) {
 
 // ---------------------------------------------------------------- 検証用の窓口
 window.tt = {
-  get mode() { return mode }, log, get m() { return m }, get me() { return me() }, BAL, RUN, world, camera, touchMode, rayHit, cam,
+  get mode() { return mode }, log, LOOK, get m() { return m }, get me() { return me() }, BAL, RUN, world, camera, touchMode, rayHit, cam,
   lockTarget: () => m && lockTarget(m, me().r, null), alive: () => m ? alive(m) : [],
   start: seed => startMatch(seed), toTitle, showResult, setLang: l => { lang = l; applyLang() }, get lang() { return lang },
   dbg: {
     pause: on => { dbgPause = on }, step: n => { for (let i = 0; i < n; i++) stepOnce(); render(STEP) },
     teleport: (x, y, z, yaw) => { const r = me().r; Object.assign(r, { x, y, z, vx: 0, vy: 0, vz: 0, rope: null, climbing: null, grounded: y < 0.1 }); if (yaw != null) r.yaw = yaw },
-    pressWire: (sx, sy) => aimAt(sx, sy), pressJump: () => { press.jump = true }, wireAuto: () => { pendingWire = { at: null, key: true } },
+    pressWire: (sx, sy) => aimAt(sx, sy), tapTarget: (sx, sy) => { const rc = renderer.domElement.getBoundingClientRect(); ndc.set((sx - rc.left) / rc.width * 2 - 1, -((sy - rc.top) / rc.height) * 2 + 1); ray.setFromCamera(ndc, camera); return tapTarget(ray.ray.origin, ray.ray.direction) }, pressJump: () => { press.jump = true }, wireAuto: () => { pendingWire = { at: null, key: true } },
     keys, stick, say, setTime: f => { m.t = f * BAL.dayLen }, get models() { return models }, sleepBros: on => { for (const c of m.chasers) { c.awake = !on; c.stun = on ? 1e9 : 0 } }
   }
 }
