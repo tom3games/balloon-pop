@@ -9,6 +9,7 @@
 - snd/thwack-*.mp3: Thwack Sounds / AntumDeluge
 - snd/bell_ding1.mp3: Bell dings/chimes / PWL
 - snd/coin_drop.mp3: Coin Drop / Vinrax
+- snd/grunt_01〜03.mp3: Little Grunts / crueltyinc
 - snd/pop1.mp3, snd/pop2.mp3, snd/pop3.mp3: 3 Pop Sounds / wubitog / CC0（ogg から mp3 に変換）
 - snd/applause.mp3: Applause in a large hall or church / eXpl0it3r（先頭6秒）
 - snd/bgm_play.mp3: Catch me if you can / poinl

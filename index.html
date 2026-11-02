@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>空中風船割り | ワイヤーアクションで風船を割りまくる3Dゲーム</title>
-<meta name="description" content="ビルや電柱にワイヤーを掛けて飛び回り、街の空に浮かぶ風船を割りまくる3Dのワイヤーアクションゲーム。割るたびに加速、続けて割ればコンボ。スマホのブラウザで無料で遊べる。">
+<title>空中風船割り | 風船屋に追われるワイヤーアクション3Dゲーム</title>
+<meta name="description" content="ビルや電柱にワイヤーを掛けて飛び回り、街の空に浮かぶ風船を割りまくる3Dのワイヤーアクションゲーム。怒った風船屋の三兄弟が追ってくる。捕まると背中の風船を割られる。スマホのブラウザで無料で遊べる。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="空中風船割り">
-<meta property="og:description" content="ワイヤーで飛び回って、空の風船を割りまくる。割るたびに加速、つなげばコンボ。スマホのブラウザで無料で遊べる。">
-<meta property="og:image" content="https://tom3games.github.io/balloon-pop/og.png?v=1">
+<meta property="og:description" content="ワイヤーで飛び回って、空の風船を割りまくる。怒った風船屋の三兄弟から逃げきれ。スマホのブラウザで無料で遊べる。">
+<meta property="og:image" content="https://tom3games.github.io/balloon-pop/og.png?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://tom3games.github.io/balloon-pop/">
@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rampart+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 </head>
 <body>
@@ -53,17 +53,18 @@
 </section>
 
 <!-- 遊び中: 上に点数と割った数・時計、真ん中にコンボ -->
-<canvas id="speedfx"></canvas><div id="hitflash"></div>
+<canvas id="speedfx"></canvas><div id="hitflash"></div><div id="danger"></div>
 <section id="hud" class="hidden">
   <div class="rope-bar">
-    <div class="scorebox"><b id="score">0</b><span class="popline"><svg viewBox="0 0 20 24" aria-hidden="true"><ellipse cx="10" cy="9" rx="7.5" ry="8.5"/><path d="M10 17.5v6" stroke-width="1.4" fill="none"/></svg><i id="popN">0</i></span></div>
+    <div class="scorebox"><b id="score">0</b><span id="lives" class="lives" data-n="3" aria-label="lives"><i></i><i></i><i></i></span><span class="popline"><svg viewBox="0 0 20 24" aria-hidden="true"><ellipse cx="10" cy="9" rx="7.5" ry="8.5"/><path d="M10 17.5v6" stroke-width="1.4" fill="none"/></svg><i id="popN">0</i></span></div>
     <div class="clock" aria-hidden="true">
       <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="#f3efe4" stroke="#2a2a2a" stroke-width="2.5"/><g stroke="#2a2a2a" stroke-width="1.6"><path d="M20 5v3M35 20h-3M20 35v-3M5 20h3"/></g><path id="clockHand" d="M20 20 L20 7" stroke="#c23a2a" stroke-width="2.4" stroke-linecap="round"/><circle cx="20" cy="20" r="2" fill="#2a2a2a"/></svg>
-      <b id="clockT">1:30</b>
+      <b id="clockT">0:00</b>
     </div>
   </div>
   <div id="combo" class="combo hidden"><b id="comboN">0</b><span data-t="combo"></span><i class="cbar"><i id="comboBar"></i></i></div>
   <div id="say" class="say hidden"></div>
+  <div id="broArrow" class="edge-arrow bro hidden"><svg viewBox="0 0 24 24"><path d="M12 2 L21 20 L12 15 L3 20Z"/></svg><span id="broD"></span></div>
   <div id="arrow" class="edge-arrow hidden"><svg viewBox="0 0 24 24"><path d="M12 2 L21 20 L12 15 L3 20Z"/></svg><span id="arrowD"></span></div>
   <div id="miss" class="miss hidden"><span>×</span><small data-t="tooFar"></small></div>
   <button id="btnPause" class="corner-btn" aria-label="pause"><svg viewBox="0 0 20 20"><rect x="5" y="4" width="3.4" height="12" rx="1"/><rect x="11.6" y="4" width="3.4" height="12" rx="1"/></svg></button>
@@ -125,7 +126,7 @@
   },9000);
 })();
 </script>
-<script src="sfx.js?v=1"></script>
-<script type="module" src="js/game.js?v=1"></script>
+<script src="sfx.js?v=2"></script>
+<script type="module" src="js/game.js?v=2"></script>
 </body>
 </html>

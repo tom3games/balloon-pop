@@ -152,3 +152,15 @@ button,a{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touc
 .pts.gold{color:#ffd34a;font-size:30px}
 @keyframes ptsUp{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-190%) scale(1)}}
 @media (orientation:landscape) and (max-height:500px){.combo{top:max(54px,calc(env(safe-area-inset-top) + 46px))}.combo b{font-size:40px}.scorebox b{font-size:28px}}
+
+/* 背中の風船（残り）と、三兄弟が近い時の赤い縁 */
+.lives{display:flex;gap:3px;align-items:center}
+.lives i{display:block;width:14px;height:17px;border-radius:50% 50% 48% 48%;background:#e8423a;box-shadow:inset -3px -3px 0 rgba(0,0,0,.18),0 1px 3px rgba(0,0,0,.5);position:relative}
+.lives i:nth-child(2){background:#2f7fe0}.lives i:nth-child(3){background:#f2a42a}
+.lives i::after{content:'';position:absolute;left:50%;top:100%;width:1px;height:7px;background:#fff}
+.lives i.gone{opacity:.18;filter:grayscale(1)}
+#danger{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(200,30,20,0) 45%,rgba(200,30,20,.6) 100%)}
+.edge-arrow.bro{--c:#e0392b}
+.edge-arrow.bro svg{fill:#e0392b}
+.edge-arrow.bro span{color:#ffb4a8}
+.edge-arrow.bro.close{animation:pulse .35s ease-in-out infinite alternate}

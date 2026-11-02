@@ -3,10 +3,11 @@ import { chromium, webkit } from 'playwright'
 import { spawn, execFileSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { MUTE_LAUNCH, muteContext } from './mute.mjs'
-import { createWorld } from './shared/track.js'
-import { setupArena } from './shared/arena.js'
-import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js'
-import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js'
+import { createWorld } from './shared/track.js?v=2'
+import { setupArena } from './shared/arena.js?v=2'
+import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=2'
+import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=2'
+import { play } from './tools/sim.mjs'
 const ROOT = import.meta.dirname
 mkdirSync(ROOT + '/shots', { recursive: true })
 const PORT = 5392
@@ -202,10 +203,35 @@ await t('白い風船（誰かの持ち物）が混じり、割ると一言が�
   for (const seed of [1, 2, 3]) { const g = createGame(world, createRunner({ id: 'me', spawn: { x: 0, y: 0, z: 700 } }), seed); for (const b of alive(g)) { n++; if (b.odd) odd++ } }
   expect(odd >= 6 && odd < n / 5, { odd, n }); return { odd, n }
 })
-await t('90秒で終わる', () => {
-  const r = createRunner({ id: 'me', spawn: { x: 0, y: 0, z: 700 } }), g = createGame(world, r, 7)
-  let n = 0; while (!g.over && n < 60 * 200) { stepGame(g, dt); n++ }
-  expect(g.over && Math.abs(g.t - BAL.sec) < 0.05, g.t); return { sec: +g.t.toFixed(1) }
+// 三兄弟（追う役）
+const mkChasers = () => [[-70, 610], [90, 620], [0, 800]].map(([x, z], i) => createRunner({ id: 'b' + i, spawn: { x, y: 0, z } }))
+await t('三兄弟: 決まった秒に起きる・触れると背中の風船が1つ減り、少しの間は捕まらない・3つでおしまい', () => {
+  const r = createRunner({ id: 'me', spawn: { x: 0, y: 0, z: 700 } }), cs = mkChasers(), g = createGame(world, r, 8, cs)
+  for (let i = 0; i < Math.round(BAL.wake[0] / dt) + 2; i++) stepGame(g, dt)
+  const awake1 = g.chasers.filter(c => c.awake).length
+  const c = g.chasers[0]; Object.assign(c.r, { x: r.x + 1, y: r.y, z: r.z })
+  stepGame(g, dt); const l1 = g.lives, im = g.immune > 0
+  Object.assign(c.r, { x: r.x + 1, y: r.y, z: r.z }); c.stun = 0; stepGame(g, dt); const l2 = g.lives
+  for (let k = 0; k < 3; k++) { g.immune = 0; c.stun = 0; Object.assign(c.r, { x: r.x + 1, y: r.y, z: r.z }); stepGame(g, dt) }
+  expect(awake1 === 1 && l1 === 2 && im && l2 === 2 && g.over && g.lives === 0, JSON.stringify({ awake1, l1, im, l2, over: g.over, lives: g.lives })); return { lives: [3, l1, l2, g.lives] }
+})
+await t('金の風船で背中の風船が1つ戻る（3つまで）', () => {
+  const r = createRunner({ id: 'me', spawn: { x: 0, y: 0, z: 700 } }), g = createGame(world, r, 9, mkChasers())
+  g.lives = 2; const gb = alive(g).find(b => b.gold); Object.assign(r, { x: gb.x, y: gb.y - 1.1, z: gb.z, grounded: false }); stepGame(g, dt)
+  const a = g.lives; const gb2 = alive(g).find(b => b.gold); Object.assign(r, { x: gb2.x, y: gb2.y - 1.1, z: gb2.z }); stepGame(g, dt)
+  expect(a === 3 && g.lives === 3, { a, b: g.lives }); return { lives: g.lives }
+})
+await t('三兄弟は空中でも自分より遅い（最高速の比べ）', () => {
+  const r = createRunner({ id: 'me', spawn: { x: 0, y: 0, z: 700 } }), cs = mkChasers(), g = createGame(world, r, 10, cs)
+  g.t = 200; const c = g.chasers[0]; c.awake = true; Object.assign(c.r, { x: 100, y: 30, z: 700, vx: 40, vy: 0, vz: 0, grounded: false })
+  stepGame(g, dt); const v = Math.hypot(c.r.vx, c.r.vy, c.r.vz)
+  expect(v <= BAL.chaserMax * BAL.speed[1] + 0.01 && v < 41, v); return { chaserMax: +v.toFixed(1), me: 41 }
+})
+await t('bot（8回ずつ）: 飛んで逃げる人ほど長く生き残り多く割る。地面だけ・何もしないは早く捕まる。初めての人も平均40秒以上', () => {
+  const avg = (k) => { const rs = []; for (let i = 1; i <= 8; i++) rs.push(play(k, i)); return { t: Math.round(rs.reduce((a, r) => a + r.t, 0) / 8), popped: +(rs.reduce((a, r) => a + r.popped, 0) / 8).toFixed(1), score: Math.round(rs.reduce((a, r) => a + r.score, 0) / 8) } }
+  const good = avg('good'), human = avg('human'), ground = avg('ground'), idle = avg('idle')
+  expect(good.t > ground.t && human.t > ground.t && human.t >= 40 && good.popped > human.popped && ground.popped < 1 && idle.popped === 0, JSON.stringify({ good, human, ground, idle }))
+  return { good, human, ground, idle }
 })
 await t('AI臭さチェック NG 0', () => {
   const out = execFileSync(process.execPath, [process.env.HOME + '/Desktop/claudecode/_shared/ai_tells.mjs', ROOT, '--json'], { encoding: 'utf8' })
@@ -234,14 +260,15 @@ await t('タイトルの後ろに風船が浮かんでいる', async () => {
   const r = await p.evaluate(() => ({ drawn: window.__balloonsDrawn, alive: tt.alive().length }))
   expect(r.drawn >= 100 && r.drawn === r.alive, r); return r
 })
-await t('始める: 点0・割った0・時計1:30・コンボは隠れている', async () => {
+await t('始める: 点0・割った0・時計0:00・背中の風船3つ・コンボは隠れている', async () => {
   await p.click('#btnStart'); await p.evaluate(() => tt.dbg.pause(true)); await p.evaluate(() => tt.dbg.step(3))
-  const r = await p.evaluate(() => ({ score: document.getElementById('score').textContent, pop: document.getElementById('popN').textContent, clock: document.getElementById('clockT').textContent, combo: document.getElementById('combo').classList.contains('hidden'), mode: tt.mode }))
-  expect(r.mode === 'play' && r.score === '0' && r.pop === '0' && /^(1:30|1:29)$/.test(r.clock) && r.combo, JSON.stringify(r)); return r
+  const r = await p.evaluate(() => ({ score: document.getElementById('score').textContent, pop: document.getElementById('popN').textContent, clock: document.getElementById('clockT').textContent, combo: document.getElementById('combo').classList.contains('hidden'), lives: document.querySelectorAll('#lives i:not(.gone)').length, mode: tt.mode }))
+  expect(r.mode === 'play' && r.score === '0' && r.pop === '0' && /^0:0[01]$/.test(r.clock) && r.combo && r.lives === 3, JSON.stringify(r)); return r
 })
 await t('画面タッチ: ビルに掛かる／遠すぎる所を押すと届く範囲に掛かる（届く物が無ければ×）', async () => {
   const r = await p.evaluate(() => {
     const me = tt.me.r
+    tt.dbg.sleepBros(true)
     tt.dbg.teleport(0, 0, 690, 0); tt.dbg.step(30)
     const cam = tt.camera
     for (let sy = 200; sy < 600 && !me.rope; sy += 40) for (let sx = 40; sx < 360 && !me.rope; sx += 40) { tt.log.length = 0; tt.dbg.pressWire(sx, sy); tt.dbg.step(1) }
@@ -274,25 +301,35 @@ await t('風船に飛び込むと割れる（点・割った数・コンボ・�
   })
   expect(r.pops >= 1 && r.score > 0 && r.pop === r.pops && (r.pops < 2 || r.comboShown) && r.snd > 0, JSON.stringify(r)); return r
 })
+await t('三兄弟に捕まると背中の風船が減り、兄弟の一言・赤い縁が出る', async () => {
+  const r = await p.evaluate(() => {
+    tt.dbg.sleepBros(false); tt.m.t = 60; tt.m.immune = 0
+    const me = tt.me.r, c = tt.m.chasers[1]; c.awake = true; c.stun = 0
+    tt.dbg.teleport(0, 0, 660, 0); Object.assign(c.r, { x: 1.5, y: 0, z: 660, vx: 0, vy: 0, vz: 0, rope: null, climbing: null }); tt.log.length = 0
+    tt.dbg.step(2)
+    return { lives: tt.m.lives, icons: document.querySelectorAll('#lives i:not(.gone)').length, ev: !!tt.log.find(e => e.t === 'caught'), say: document.getElementById('say').textContent }
+  })
+  expect(r.lives === 2 && r.icons === 2 && r.ev && /次男|Mid bro/.test(r.say), JSON.stringify(r)); return r
+})
 await t('時間で暗くなる（昼→夕方→夜）', async () => {
   const shots = []
   for (const f of [0.05, 0.6, 0.97]) {
-    await p.evaluate(f => { tt.dbg.setTime(f); tt.dbg.teleport(0, 30, 650, 0); tt.dbg.step(2) }, f)
+    await p.evaluate(f => { tt.dbg.sleepBros(true); tt.dbg.setTime(f); tt.dbg.teleport(0, 30, 650, 0); tt.dbg.step(2) }, f)
     await p.screenshot({ path: `${ROOT}/shots/time-${Math.round(f * 100)}.png` })
     shots.push(await p.evaluate(() => { const c = document.querySelector('#view canvas'), x = document.createElement('canvas'); x.width = 40; x.height = 80; const g = x.getContext('2d'); g.drawImage(c, 0, 0, 40, 80); const d = g.getImageData(0, 0, 40, 80).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += d[i] + d[i + 1] + d[i + 2]; return Math.round(s / (d.length / 4) / 3) }))
   }
   expect(shots[0] > shots[1] && shots[1] > shots[2] && shots[2] > 12, JSON.stringify(shots)); return { brightness: shots }
 })
-await t('90秒たつと結果（点・割った数・最高コンボ・称号・Xのリンク・画像）', async () => {
-  await p.evaluate(() => { tt.dbg.setTime(0.999); tt.dbg.step(120) }); await p.evaluate(() => tt.dbg.pause(false)); await p.waitForTimeout(2500)
+await t('背中の風船を3つとも割られると結果（逃げた秒・割った数・称号・Xのリンク・画像）', async () => {
+  await p.evaluate(() => { tt.dbg.sleepBros(false); tt.m.lives = 1; tt.m.immune = 0; const c = tt.m.chasers[0]; c.awake = true; c.stun = 0; const me = tt.me.r; Object.assign(c.r, { x: me.x + 1, y: me.y, z: me.z }); tt.dbg.step(2) }); await p.evaluate(() => tt.dbg.pause(false)); await p.waitForTimeout(2500)
   const r = await p.evaluate(() => ({ mode: tt.mode, shown: !document.getElementById('result').classList.contains('hidden'), w: document.getElementById('podium').width, rank: document.getElementById('rankBig').textContent, stats: document.getElementById('stats').textContent, post: document.getElementById('btnPost').href, score: window.__lastScore }))
-  expect(r.mode === 'result' && r.shown && r.w === 720 && r.rank.length > 0 && /割った/.test(r.stats) && /twitter\.com\/intent/.test(r.post) && r.score > 0, JSON.stringify(r)); return { rank: r.rank, score: r.score }
+  expect(r.mode === 'result' && r.shown && r.w === 720 && r.rank.length > 0 && /逃げた/.test(r.stats) && /twitter\.com\/intent/.test(r.post), JSON.stringify(r)); return { rank: r.rank, stats: r.stats }
 })
-await t('何もしない90秒は0点・一番下の称号', async () => {
+await t('何もしないと三兄弟に捕まって終わる（0点・一番下の称号）', async () => {
   await p.click('#btnAgain'); await p.evaluate(() => tt.dbg.pause(true))
-  await p.evaluate(() => { tt.dbg.teleport(0, 0, 640); tt.dbg.step(60 * 92) }); await p.evaluate(() => tt.dbg.pause(false)); await p.waitForTimeout(2500)
-  const r = await p.evaluate(() => ({ mode: tt.mode, score: window.__lastScore, rank: document.getElementById('rankBig').textContent }))
-  expect(r.mode === 'result' && r.score === 0 && /見習い|Rookie/.test(r.rank), JSON.stringify(r)); return r
+  await p.evaluate(() => { tt.dbg.teleport(0, 0, 640); for (let i = 0; i < 60 * 240 && tt.mode === 'play' && !tt.m.over; i++) tt.dbg.step(1) }); await p.evaluate(() => tt.dbg.pause(false)); await p.waitForTimeout(2500)
+  const r = await p.evaluate(() => ({ mode: tt.mode, score: window.__lastScore, rank: document.getElementById('rankBig').textContent, t: Math.round(tt.m.t) }))
+  expect(r.mode === 'result' && r.score === 0 && /見習い|Rookie/.test(r.rank) && r.t < 200, JSON.stringify(r)); return r
 })
 await t('音: 鳴らした回数が数えられ、テスト中は実際に無音', async () => {
   const r = await p.evaluate(() => ({ calls: window.__soundCalls, played: Object.keys(Snd.played).length, ok: window.__muteOk() }))
@@ -312,7 +349,7 @@ await p.close()
   const q = await open(browser, { hasTouch: true, isMobile: true })
   await t('向き: カメラを0〜720°以上回しても、地上・空中・ワイヤー中でスティックの上下左右＝画面の上下左右（84通り）', async () => {
     const out = await q.evaluate(() => {
-      tt.start(3); tt.dbg.pause(true)
+      tt.start(3); tt.dbg.pause(true); tt.dbg.sleepBros(true)
       const res = [], r = tt.me.r
       const hds = [0, 1.2, Math.PI, 4.4, Math.PI * 2 + 0.5, -2.5, Math.PI * 4 + 2]
       const dirs = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }
@@ -347,7 +384,7 @@ await p.close()
   })
   await t('向き: 壁に張り付いている時も、スティックの左右＝画面の左右（カメラを壁の両側・何周回しても）', async () => {
     const out = await q.evaluate(() => {
-      tt.toTitle(); tt.start(4); tt.dbg.pause(true)
+      tt.toTitle(); tt.start(4); tt.dbg.pause(true); tt.dbg.sleepBros(true)
       const r = tt.me.r, res = []
       // 一番近い建物の壁を探して張り付く
       const W = tt.world, b = W.colliders.filter(o => o.kind === 'building' && o.y1 > 20 && !o.yaw).sort((a, c) => Math.hypot(a.cx, a.cz - 650) - Math.hypot(c.cx, c.cz - 650))[0]
@@ -370,7 +407,7 @@ await p.close()
   })
   await t('ワイヤーボタン: 届く所に風船があればその方へ掛かり、風船に輪が出る', async () => {
     const r = await q.evaluate(() => {
-      tt.toTitle(); tt.start(5); tt.dbg.pause(true)
+      tt.toTitle(); tt.start(5); tt.dbg.pause(true); tt.dbg.sleepBros(true)
       const me = tt.me.r
       const b = tt.alive().sort((p, q) => p.y - q.y)[0]
       tt.cam.hd = 0; tt.cam.userT = performance.now()

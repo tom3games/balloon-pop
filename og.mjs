@@ -19,18 +19,22 @@ await p.evaluate(() => {
   const k = Math.floor(it.length / 2), b = it[k], n = it[k + 1] || it[k - 1], dx = n.x - b.x, dz = n.z - b.z, l = Math.hypot(dx, dz)
   Object.assign(me, { x: b.x - dx / l * 1.2, y: b.y - 1.6, z: b.z - dz / l * 1.2, vx: dx / l * 20, vy: 2, vz: dz / l * 20, grounded: false, climbing: null, yaw: Math.atan2(dx, dz) })
   me.rope = { x: b.x + dx / l * 6, y: b.y + 18, z: b.z + dz / l * 6, len: 19, t: 0.5 }
+  // すぐ後ろに長男（売り物の風船の束を持って追ってくる）
+  const c = tt.m.chasers[0]; c.awake = true
+  Object.assign(c.r, { x: me.x - dx / l * 5.5 - dz / l * 1.2, y: me.y - 0.6, z: me.z - dz / l * 5.5 + dx / l * 1.2, vx: dx / l * 18, vy: 1, vz: dz / l * 18, grounded: false, climbing: null, yaw: Math.atan2(dx, dz) })
+  c.r.rope = { x: me.x - dx / l * 2, y: me.y + 18, z: me.z - dz / l * 2, len: 19, t: 0.5 }
   tt.dbg.step(1)
   window.__freeze = true
-  const c = tt.camera
+  const cm = tt.camera
   // 横から少し後ろ。列が画面の右へ流れていく
   const sx = -dz / l, sz = dx / l
-  c.position.set(me.x - dx / l * 7 + sx * 6, me.y + 2.4, me.z - dz / l * 7 + sz * 6); c.lookAt(me.x + dx / l * 6, me.y + 1.4, me.z + dz / l * 6); c.fov = 58; c.updateProjectionMatrix()
+  cm.position.set(me.x - dx / l * 4 + sx * 9, me.y + 2.6, me.z - dz / l * 4 + sz * 9); cm.lookAt(me.x + dx / l * 2, me.y + 1.2, me.z + dz / l * 2); cm.fov = 60; cm.updateProjectionMatrix()
   tt.dbg.step(1)
   for (const id of ['hud', 'pause', 'title']) document.getElementById(id).classList.add('hidden')
   const d = document.createElement('div')
   d.innerHTML = `<div style="position:fixed;left:48px;top:44px;z-index:30;color:#fff">
     <div style="font-family:'Rampart One',sans-serif;font-size:100px;line-height:1.05;transform:rotate(-2.5deg);transform-origin:0 100%;text-shadow:0 4px 0 rgba(0,0,0,.3)">空中<br>風船割り</div>
-    <div style="font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;font-size:34px;margin-top:22px;line-height:1.4;text-shadow:0 2px 10px rgba(0,0,0,.85)">ワイヤーで飛んで<br>風船を割りまくる</div></div>`
+    <div style="font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;font-size:34px;margin-top:22px;line-height:1.4;text-shadow:0 2px 10px rgba(0,0,0,.85)">風船屋に追われながら<br>風船を割りまくる</div></div>`
   document.body.appendChild(d)
 })
 await p.waitForTimeout(900)
