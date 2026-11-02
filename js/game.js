@@ -1,18 +1,18 @@
 // 空中風船割り。WIRE ESCAPE のワイヤーと街で、空に浮かぶ風船を飛び回って割りまくる（空中しっぽ取りのクローンから作り替え）
 // 2026-11-02 本人「ワイヤーで飛び回るのは気持ちいい。しっぽ取りは人には難しい。もっと爽快で気持ちいいものに」
 import * as THREE from 'three'
-import { GAME } from '../shared/config.js?v=4'
-import { createWorld } from '../shared/track.js?v=4'
-import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=4'
-import { buildScene } from './scene.js?v=4'
-import { FX } from './fx.js?v=4'
-import { loadSky, setAniso } from './look.js?v=4'
-import { Q } from './quality.js?v=4'
-import { RunnerModel } from './runnermodel.js?v=4'
-import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=4'
-import { createRunner, stepRunner, findAnchor, rayHit, RUN } from '../shared/runner.js?v=4'
-import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=4'
-import { createChaser, chaserInput } from '../shared/chaser.js?v=4'
+import { GAME } from '../shared/config.js?v=5'
+import { createWorld } from '../shared/track.js?v=5'
+import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=5'
+import { buildScene } from './scene.js?v=5'
+import { FX } from './fx.js?v=5'
+import { loadSky, setAniso } from './look.js?v=5'
+import { Q } from './quality.js?v=5'
+import { RunnerModel } from './runnermodel.js?v=5'
+import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=5'
+import { createRunner, stepRunner, findAnchor, rayHit, RUN } from '../shared/runner.js?v=5'
+import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=5'
+import { createChaser, chaserInput } from '../shared/chaser.js?v=5'
 
 const $ = id => document.getElementById(id)
 const STEP = GAME.step
@@ -23,7 +23,7 @@ const store = { get: k => { try { return localStorage.getItem(k) } catch (e) { r
 const T = {
   ja: {
     logo: '空中風船割り', sub: '風船屋に追われながら、空の風船を割りまくる',
-    start: 'はじめる', how: '遊び方', lang: 'EN', more: 'ほかのゲーム', muteOn: '音 入', muteOff: '音 切', loading: '準備中',
+    start: 'はじめる', how: '遊び方', lang: 'EN', more: 'ほかのゲーム', muteOn: '音 入', muteOff: '音 切', loading: '風船をふくらませ中',
     howTitle: '遊び方', ok: 'わかった',
     howItems: [
       '<b>大きいボタン</b>か建物・電柱を<b>タッチ</b>でワイヤー。もう一回で離す',
@@ -53,7 +53,7 @@ const T = {
   },
   en: {
     logo: 'Sky Balloon Pop', sub: 'Pop the balloons while the balloon shop brothers chase you',
-    start: 'Play', how: 'How to play', lang: 'JP', more: 'More games', muteOn: 'Sound on', muteOff: 'Muted', loading: 'Loading',
+    start: 'Play', how: 'How to play', lang: 'JP', more: 'More games', muteOn: 'Sound on', muteOff: 'Muted', loading: 'Blowing up balloons',
     howTitle: 'How to play', ok: 'Got it',
     howItems: [
       'The <b>big button</b> or <b>tapping</b> a building or pole fires the wire. Press again to let go',
@@ -769,4 +769,15 @@ window.tt = {
 applyLang()
 toTitle()
 requestAnimationFrame(frame)
-setTimeout(() => { $('boot').classList.add('hidden'); window.__ttReady = true }, 50)
+window.__jsUp = true
+// ロード画面: 本物の読み込み（人物・空・質感）に合わせて進み、全部そろったら消す。遅い回線でも12秒で必ず消す
+{
+  let shown = 0, done = false
+  const set = p => { shown = Math.max(shown, Math.min(1, p)); $('boot').style.setProperty('--p', shown.toFixed(3)) }
+  THREE.DefaultLoadingManager.onProgress = (u, l, n) => set(0.1 + 0.85 * l / Math.max(1, n))
+  const finish = () => { if (done) return; done = true; set(1); setTimeout(() => { $('boot').classList.add('out'); setTimeout(() => $('boot').classList.add('hidden'), 360); window.__ttReady = true }, 220) }
+  set(0.06)
+  const skyP = new Promise(ok => { const k = setInterval(() => { if (skyReady) { clearInterval(k); ok() } }, 60) })
+  Promise.all([loadCharAssets().catch(() => {}), skyP]).then(finish)
+  setTimeout(finish, 12000)
+}

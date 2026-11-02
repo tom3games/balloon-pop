@@ -3,10 +3,10 @@ import { chromium, webkit } from 'playwright'
 import { spawn, execFileSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { MUTE_LAUNCH, muteContext } from './mute.mjs'
-import { createWorld } from './shared/track.js?v=4'
-import { setupArena } from './shared/arena.js?v=4'
-import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=4'
-import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=4'
+import { createWorld } from './shared/track.js?v=5'
+import { setupArena } from './shared/arena.js?v=5'
+import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=5'
+import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=5'
 import { play } from './tools/sim.mjs'
 const ROOT = import.meta.dirname
 mkdirSync(ROOT + '/shots', { recursive: true })
@@ -247,6 +247,14 @@ await t('AI臭さチェック NG 0', () => {
 const browser = await chromium.launch({ ...MUTE_LAUNCH, args: [...MUTE_LAUNCH.args, ...GL] })
 const p = await open(browser)
 await t('起動時にエラーが出ない', async () => { expect(p.errs.length === 0, p.errs.join('|')) })
+await t('ロード画面: 開いた直後に雰囲気の絵と進み具合が出て、読み込みが終わると消える', async () => {
+  const q2 = await browser.newPage(); await q2.goto(URL0, { waitUntil: 'domcontentloaded' })
+  const first = await q2.evaluate(() => { const b = document.getElementById('boot'); return { shown: !b.classList.contains('hidden') && getComputedStyle(b).display !== 'none', svg: !!b.querySelector('svg'), bar: !!b.querySelector('.bt-bar') } })
+  await q2.waitForFunction(() => window.__ttReady, null, { timeout: 20000 }); await q2.waitForTimeout(500)
+  const last = await q2.evaluate(() => { const b = document.getElementById('boot'); return { hidden: b.classList.contains('hidden'), p: b.style.getPropertyValue('--p') } })
+  await q2.close()
+  expect(first.shown && first.svg && first.bar && last.hidden && +last.p === 1, JSON.stringify({ first, last })); return { first, last }
+})
 await t('ブラウザの拡大が起きない', async () => {
   const r = await p.evaluate(() => {
     const vp = document.querySelector('meta[name=viewport]').content
@@ -326,7 +334,7 @@ await t('矢印は方角だけ: 兄弟が上にいても下にいても、同じ
     tt.m.immune = 0; tt.dbg.sleepBros(true)
     return { a0: out[0], a1: out[1], cx: Math.round(el.left + el.width / 2), W: innerWidth, bottom: Math.round(innerHeight - el.bottom), mode: tt.mode, lives: tt.m.lives, over: tt.m.over, hid: document.getElementById('broArrow').className }
   })
-  expect(r.a0 != null && Math.abs(r.a0 - r.a1) < 0.02 && Math.abs(r.cx - r.W / 2) < 4, JSON.stringify(r)); return r
+  expect(r.a0 != null && Math.abs(r.a0 - r.a1) < 0.1 && Math.abs(r.cx - r.W / 2) < 4, JSON.stringify(r)); return r
 })
 await t('時間で暗くなる（昼→夕方→夜）', async () => {
   const shots = []

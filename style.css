@@ -170,3 +170,15 @@ button,a{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touc
 #broArrow{left:50%;top:auto;bottom:max(150px,calc(env(safe-area-inset-bottom) + 140px))}
 #broArrow{margin:0 0 -27px -27px}
 @media (orientation:landscape) and (max-height:500px){#arrow{top:max(70px,calc(env(safe-area-inset-top) + 62px))}#broArrow{bottom:max(24px,calc(env(safe-area-inset-bottom) + 16px))}}
+
+/* ロード画面（ゲームの雰囲気。2026-11-03 本人「読み込みが遅い。いい感じのロード中の画面を」） */
+#boot{flex-direction:column;gap:12px;background:linear-gradient(#7fb2e6,#bcd8f2);transition:opacity .35s}
+#boot.out{opacity:0}
+.bt-scene{width:min(40vw,150px);animation:btbob 2.2s ease-in-out infinite}
+.bt-bal{width:100%;height:auto;overflow:visible}
+.bt-body{transform-box:fill-box;transform-origin:50% 100%;transform:scale(calc(.35 + .65 * var(--p)));transition:transform .3s cubic-bezier(.2,1.4,.4,1)}
+@keyframes btbob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-8px) rotate(3deg)}}
+.bt-msg{margin:0;font-weight:900;font-size:17px;letter-spacing:.06em;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.35)}
+.bt-bar{width:min(60vw,220px);height:5px;background:rgba(255,255,255,.4);border-radius:3px;overflow:hidden}
+.bt-bar i{display:block;height:100%;width:calc(var(--p) * 100%);background:#e8423a;transition:width .25s}
+#boot.out{pointer-events:none}

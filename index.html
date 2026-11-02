@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rampart+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 </head>
 <body>
@@ -100,7 +100,7 @@
   </div>
 </section>
 
-<div id="boot" class="boot"><span data-t="loading">準備中…</span></div>
+<div id="boot" class="boot" style="--p:0"><div class="bt-scene" aria-hidden="true"><svg class="bt-bal" viewBox="0 0 120 170"><path class="bt-str" d="M60 122 Q66 140 58 168" fill="none" stroke="#f4f1ea" stroke-width="2"/><g class="bt-body"><ellipse cx="60" cy="62" rx="44" ry="54" fill="#e8423a"/><path d="M53 114 L67 114 L60 124 Z" fill="#c9342d"/><ellipse cx="44" cy="40" rx="9" ry="15" fill="#fff" opacity=".45" transform="rotate(-25 44 40)"/></g></svg></div><p class="bt-msg" data-t="loading">風船をふくらませ中</p><div class="bt-bar"><i></i></div></div>
 
 <script>
 // 拡大を止める（ピンチ・ダブルタップ・Ctrl+ホイール）。iOS は user-scalable=no を無視するので JS でも止める
@@ -119,14 +119,14 @@
   window.addEventListener('error',function(e){errs.push((e.message||'error')+' @'+(e.filename||'')+':'+(e.lineno||''))});
   window.addEventListener('unhandledrejection',function(e){errs.push('reject: '+(e.reason&&e.reason.message||e.reason))});
   setTimeout(function(){
-    if(window.__ttReady) return;
+    if(window.__jsUp) return;
     var d=document.createElement('div');d.id='boot-err';
     d.textContent='起動できませんでした / failed to start\n'+(errs.join('\n')||'(no error captured)')+'\n'+navigator.userAgent;
     document.body.appendChild(d);
   },9000);
 })();
 </script>
-<script src="sfx.js?v=4"></script>
-<script type="module" src="js/game.js?v=4"></script>
+<script src="sfx.js?v=5"></script>
+<script type="module" src="js/game.js?v=5"></script>
 </body>
 </html>
