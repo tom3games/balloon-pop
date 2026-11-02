@@ -8,10 +8,12 @@
 // - 割るたびに少し加速して上へ跳ねる（つなぐほど速く気持ちよくなる）
 // - 続けて割るとコンボ。コンボが続くほど1個の点が上がる。金の風船は大きく点が高い
 // - 割った風船は少しすると別の所に新しい列で出てくる（空になることがない）
-import { RUN } from './runner.js?v=2'
+import { RUN } from './runner.js?v=3'
 
 export const BAL = {
-  dayLen: 180,          // 昼から夜になるまでの秒数（時間切れは無い）
+  sec: 120,             // 制限時間（2026-11-03 本人「制限時間欲しい」）。最後まで逃げきると残った背中の風船1つにつき escapeBonus 点
+  escapeBonus: 200,
+  dayLen: 120,          // 昼から夜になるまでの秒数
   lives: 3,             // 背中の風船
   catchR: 2.6,          // 三兄弟の胸とこれより近いと捕まる
   hurtImmune: 2.6,      // 捕まったあと捕まらない秒数
@@ -100,6 +102,7 @@ export const alive = m => { const out = []; for (const r of m.rows) for (const b
 export function stepGame(m, dt) {
   if (m.over) return
   m.t += dt
+  if (m.t >= BAL.sec) { const bonus = m.lives * BAL.escapeBonus; m.score += bonus; m.escaped = true; m.over = true; m.events.push({ t: 'end', timeUp: true, bonus, lives: m.lives }); return }
   const r = m.me
   // 三兄弟: 起きる・速さが上がる・捕まえる
   m.immune = Math.max(0, m.immune - dt)

@@ -1,18 +1,18 @@
 // 空中風船割り。WIRE ESCAPE のワイヤーと街で、空に浮かぶ風船を飛び回って割りまくる（空中しっぽ取りのクローンから作り替え）
 // 2026-11-02 本人「ワイヤーで飛び回るのは気持ちいい。しっぽ取りは人には難しい。もっと爽快で気持ちいいものに」
 import * as THREE from 'three'
-import { GAME } from '../shared/config.js?v=2'
-import { createWorld } from '../shared/track.js?v=2'
-import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=2'
-import { buildScene } from './scene.js?v=2'
-import { FX } from './fx.js?v=2'
-import { loadSky, setAniso } from './look.js?v=2'
-import { Q } from './quality.js?v=2'
-import { RunnerModel } from './runnermodel.js?v=2'
-import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=2'
-import { createRunner, stepRunner, findAnchor, rayHit, RUN } from '../shared/runner.js?v=2'
-import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=2'
-import { createChaser, chaserInput } from '../shared/chaser.js?v=2'
+import { GAME } from '../shared/config.js?v=3'
+import { createWorld } from '../shared/track.js?v=3'
+import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=3'
+import { buildScene } from './scene.js?v=3'
+import { FX } from './fx.js?v=3'
+import { loadSky, setAniso } from './look.js?v=3'
+import { Q } from './quality.js?v=3'
+import { RunnerModel } from './runnermodel.js?v=3'
+import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=3'
+import { createRunner, stepRunner, findAnchor, rayHit, RUN } from '../shared/runner.js?v=3'
+import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=3'
+import { createChaser, chaserInput } from '../shared/chaser.js?v=3'
 
 const $ = id => document.getElementById(id)
 const STEP = GAME.step
@@ -28,7 +28,7 @@ const T = {
     howItems: [
       '<b>大きいボタン</b>か建物・電柱を<b>タッチ</b>でワイヤー。もう一回で離す',
       '風船に<b>飛び込む</b>と割れる。割るたびに少し加速する',
-      '怒った<b>風船屋の三兄弟</b>が追ってくる。捕まると背中の風船を1つ割られる。3つ割られたら終わり',
+      '怒った<b>風船屋の三兄弟</b>が追ってくる。捕まると背中の風船を1つ割られる。<b>2分</b>逃げきれば、残った風船がボーナス',
       '速く飛べば振り切れる。地面にいると追いつかれる。<b>金の風船</b>で背中の風船が1つ戻る'
     ],
     keysPc: 'PC: WASD・矢印で移動　クリックでワイヤー（E でも可）　Space でも離れる・壁を蹴る　ドラッグで見回す',
@@ -43,7 +43,7 @@ const T = {
     gold: '金の風船 ×5',
     // 白い風船は誰かの持ち物。割ると下から持ち主の声が聞こえる（全部うっかり。怒ってはいるが平和）
     odd: ['それ、娘の誕生日のやつ…', '社長の還暦祝いが…', 'プロポーズ用やったのに', 'デュフフ…ぼくの風船…デュフ', '中にへそくり入れてたんやけど', 'それ選挙の…まあええか', '犬の名前書いてたのに', '割る音で昼寝から起きた'], comboN: n => `${n}コンボ！`, comboEnd: n => `${n}コンボ`, last30: 'あと30秒', last10: 'あと10秒', end: 'そこまで',
-    again: 'もう一回', save: '画像を保存', post: 'Xでポスト', toTitle: 'タイトル', ptsUnit: '点', pop: '個', combo: 'コンボ', statTime: '逃げた', downEnd: '全部割られた…',
+    again: 'もう一回', save: '画像を保存', post: 'Xでポスト', toTitle: 'タイトル', ptsUnit: '点', pop: '個', combo: 'コンボ', statTime: '逃げた', downEnd: '全部割られた…', escaped: (n, b) => `逃げきった！<br><small>残った風船 ${n}つ ＋${b}点</small>`, statEscaped: '逃げきり',
     statPop: '割った', statCombo: '最高コンボ', statAir: '空にいた',
     titles: ['見習い', '風船ハンター', '空の割り屋', '風船の王'],
     verdict: ['まずは列をなぞろう', 'いい飛びっぷり', 'コンボがつながってる', '空の主。街の子どもは泣いている'],
@@ -58,7 +58,7 @@ const T = {
     howItems: [
       'The <b>big button</b> or <b>tapping</b> a building or pole fires the wire. Press again to let go',
       '<b>Fly into</b> balloons to pop them. Every pop gives you a little speed',
-      'The angry <b>balloon shop brothers</b> chase you. Get caught and they pop one of the 3 balloons on your back',
+      'The angry <b>balloon shop brothers</b> chase you. Get caught and they pop one of your 3 balloons. Last <b>2 minutes</b> for a bonus',
       'Fly fast to shake them off. On the ground they catch up. <b>Gold balloons</b> give one back'
     ],
     keysPc: 'PC: WASD / arrows move · click to wire (or E) · Space also lets go / kicks off a wall · drag to look',
@@ -72,7 +72,7 @@ const T = {
     near: 'Behind you!', life: 'Got a balloon back', lastOne: 'One left!',
     gold: 'Gold balloon x5',
     odd: ['That was my daughter\'s birthday balloon...', 'The boss\'s retirement balloon...', 'I was going to propose with that', 'Heh heh... my balloon... heh', 'My secret savings were in there', 'That was for the election... eh, fine', 'It had my dog\'s name on it', 'You woke me from my nap'], comboN: n => `${n} combo!`, comboEnd: n => `${n} combo`, last30: '30 seconds left', last10: '10 seconds left', end: 'Time!',
-    again: 'Again', save: 'Save image', post: 'Post on X', toTitle: 'Title', ptsUnit: 'points', pop: '', combo: 'combo', statTime: 'Survived', downEnd: 'All popped...',
+    again: 'Again', save: 'Save image', post: 'Post on X', toTitle: 'Title', ptsUnit: 'points', pop: '', combo: 'combo', statTime: 'Survived', downEnd: 'All popped...', escaped: (n, b) => `You made it!<br><small>${n} balloons left +${b}</small>`, statEscaped: 'Escaped',
     statPop: 'Popped', statCombo: 'Best combo', statAir: 'In the air',
     titles: ['Rookie', 'Balloon hunter', 'Sky popper', 'Balloon king'],
     verdict: ['Follow the balloon lines', 'Nice swinging', 'Your combos are flowing', 'Master of the sky. The kids are crying'],
@@ -419,8 +419,8 @@ function updateHud(dt) {
     $('comboN').textContent = m.combo
   }
   $('comboBar').style.transform = `scaleX(${m.combo >= 2 ? Math.max(0, m.comboT / BAL.comboSec).toFixed(3) : 0})`
-  $('clockT').textContent = fmt(m.t)
-  $('clockHand').setAttribute('transform', `rotate(${(m.t / 60) * 360} 20 20)`)
+  $('clockT').textContent = fmt(BAL.sec - m.t)
+  $('clockHand').setAttribute('transform', `rotate(${(m.t / BAL.sec) * 360} 20 20)`)
   broArrow()
   const lv = $('lives'); if (lv.dataset.n !== String(m.lives)) { lv.dataset.n = m.lives; lv.querySelectorAll('i').forEach((el, j) => el.classList.toggle('gone', j >= m.lives)) }
   if (sayT > 0) { sayT -= dt; $('say').classList.toggle('hidden', sayT <= 0) }
@@ -499,7 +499,7 @@ function onGameEvent(e) {
     const L = t('caughtL')[e.who]; say(`<small>${t('bros')[e.who]}</small>` + L[Math.floor(Math.random() * L.length)] + (e.lives === 1 ? `<br><b>${t('lastOne')}</b>` : ''), 1.8, 'bad')
   }
   else if (e.t === 'life') { say(t('life'), 1.4, 'good'); sfx('ding', { vol: 0.6 }) }
-  else if (e.t === 'end') { sfx('whoosh'); say(e.down ? t('downEnd') : t('end'), 1.8, 'big'); endAt = 1.8 }
+  else if (e.t === 'end') { sfx('whoosh'); if (e.timeUp) { say(t('escaped')(e.lives, e.bonus), 2.2, 'big good'); sfx('clap', { vol: 0.5 }) } else say(t('downEnd'), 1.8, 'big'); endAt = e.timeUp ? 2.2 : 1.8 }
 }
 // 割った所に点数を浮かべる
 function floatPts(e) {
@@ -522,7 +522,7 @@ function showResult() {
   $('rankBig').textContent = R.titles[rk]
   $('rankBig').className = 'rank-big r' + (4 - rk)
   const air = Math.round(m.airT / Math.max(1, m.t) * 100)
-  $('stats').innerHTML = `<span>${R.statTime} <b>${Math.floor(m.t)}${lang === 'ja' ? '秒' : 's'}</b></span><span>${R.statPop} <b>${m.popped}</b></span><span>${R.statCombo} <b>${m.bestCombo}</b></span>`
+  $('stats').innerHTML = `<span>${m.escaped ? R.statEscaped : R.statTime} <b>${Math.floor(Math.min(m.t, BAL.sec))}${lang === 'ja' ? '秒' : 's'}</b></span><span>${R.statPop} <b>${m.popped}</b></span><span>${R.statCombo} <b>${m.bestCombo}</b></span>`
   $('verdict').textContent = R.verdict[rk]
   sfx(rk >= 3 ? 'win' : rk === 2 ? 'mid' : rk === 1 ? 'meh' : 'lose', { vol: 0.8 })
   if (rk >= 2) sfx('clap', { vol: 0.6, delay: 0.4 })
@@ -744,6 +744,10 @@ function render(dt) {
     const nc = nearestChaser(m), close = nc && m.immune <= 0 && nc.c.stun <= 0 ? Math.max(0, 1 - nc.d / 22) : 0
     $('danger').style.opacity = (close * (0.55 + 0.45 * Math.sin(performance.now() / 110))).toFixed(2)
     if (close > 0.4 && !warned.near) { warned.near = 1; sfx('tick', { vol: 0.6 }) } else if (close < 0.1) warned.near = 0
+    const left = BAL.sec - tt
+    if (left < 30 && !warned[30]) { warned[30] = 1; say(t('last30'), 1.6, 'big'); sfx('tick') }
+    if (left < 10 && !warned[10]) { warned[10] = 1; say(t('last10'), 1.6, 'big'); sfx('tick') }
+    if (left < 5 && Math.floor(left) !== warned.tk) { warned.tk = Math.floor(left); sfx('tick', { vol: 0.5 }) }
     updateHud(dt)
     if (endAt > 0) { endAt -= dt; if (endAt <= 0) showResult() }
     snapAt -= dt

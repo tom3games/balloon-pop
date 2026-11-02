@@ -3,10 +3,10 @@ import { chromium, webkit } from 'playwright'
 import { spawn, execFileSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { MUTE_LAUNCH, muteContext } from './mute.mjs'
-import { createWorld } from './shared/track.js?v=2'
-import { setupArena } from './shared/arena.js?v=2'
-import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=2'
-import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=2'
+import { createWorld } from './shared/track.js?v=3'
+import { setupArena } from './shared/arena.js?v=3'
+import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=3'
+import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=3'
 import { play } from './tools/sim.mjs'
 const ROOT = import.meta.dirname
 mkdirSync(ROOT + '/shots', { recursive: true })
@@ -215,6 +215,11 @@ await t('三兄弟: 決まった秒に起きる・触れると背中の風船が
   for (let k = 0; k < 3; k++) { g.immune = 0; c.stun = 0; Object.assign(c.r, { x: r.x + 1, y: r.y, z: r.z }); stepGame(g, dt) }
   expect(awake1 === 1 && l1 === 2 && im && l2 === 2 && g.over && g.lives === 0, JSON.stringify({ awake1, l1, im, l2, over: g.over, lives: g.lives })); return { lives: [3, l1, l2, g.lives] }
 })
+await t('制限時間2分: 逃げきると残った背中の風船1つにつき200点・時間で終わる', () => {
+  const r = createRunner({ id: 'me', spawn: { x: 0, y: 0, z: 700 } }), g = createGame(world, r, 11, [])
+  g.lives = 2; let n = 0; while (!g.over && n < 60 * 200) { stepGame(g, dt); n++ }
+  expect(g.over && g.escaped && Math.abs(g.t - BAL.sec) < 0.05 && g.score === 400, { t: g.t, score: g.score, escaped: g.escaped }); return { sec: +g.t.toFixed(1), bonus: g.score }
+})
 await t('金の風船で背中の風船が1つ戻る（3つまで）', () => {
   const r = createRunner({ id: 'me', spawn: { x: 0, y: 0, z: 700 } }), g = createGame(world, r, 9, mkChasers())
   g.lives = 2; const gb = alive(g).find(b => b.gold); Object.assign(r, { x: gb.x, y: gb.y - 1.1, z: gb.z, grounded: false }); stepGame(g, dt)
@@ -223,7 +228,7 @@ await t('金の風船で背中の風船が1つ戻る（3つまで）', () => {
 })
 await t('三兄弟は空中でも自分より遅い（最高速の比べ）', () => {
   const r = createRunner({ id: 'me', spawn: { x: 0, y: 0, z: 700 } }), cs = mkChasers(), g = createGame(world, r, 10, cs)
-  g.t = 200; const c = g.chasers[0]; c.awake = true; Object.assign(c.r, { x: 100, y: 30, z: 700, vx: 40, vy: 0, vz: 0, grounded: false })
+  g.t = 110; const c = g.chasers[0]; c.awake = true; Object.assign(c.r, { x: 100, y: 30, z: 700, vx: 40, vy: 0, vz: 0, grounded: false })
   stepGame(g, dt); const v = Math.hypot(c.r.vx, c.r.vy, c.r.vz)
   expect(v <= BAL.chaserMax * BAL.speed[1] + 0.01 && v < 41, v); return { chaserMax: +v.toFixed(1), me: 41 }
 })
@@ -260,10 +265,10 @@ await t('タイトルの後ろに風船が浮かんでいる', async () => {
   const r = await p.evaluate(() => ({ drawn: window.__balloonsDrawn, alive: tt.alive().length }))
   expect(r.drawn >= 100 && r.drawn === r.alive, r); return r
 })
-await t('始める: 点0・割った0・時計0:00・背中の風船3つ・コンボは隠れている', async () => {
+await t('始める: 点0・割った0・時計2:00・背中の風船3つ・コンボは隠れている', async () => {
   await p.click('#btnStart'); await p.evaluate(() => tt.dbg.pause(true)); await p.evaluate(() => tt.dbg.step(3))
   const r = await p.evaluate(() => ({ score: document.getElementById('score').textContent, pop: document.getElementById('popN').textContent, clock: document.getElementById('clockT').textContent, combo: document.getElementById('combo').classList.contains('hidden'), lives: document.querySelectorAll('#lives i:not(.gone)').length, mode: tt.mode }))
-  expect(r.mode === 'play' && r.score === '0' && r.pop === '0' && /^0:0[01]$/.test(r.clock) && r.combo && r.lives === 3, JSON.stringify(r)); return r
+  expect(r.mode === 'play' && r.score === '0' && r.pop === '0' && /^(2:00|1:59)$/.test(r.clock) && r.combo && r.lives === 3, JSON.stringify(r)); return r
 })
 await t('画面タッチ: ビルに掛かる／遠すぎる所を押すと届く範囲に掛かる（届く物が無ければ×）', async () => {
   const r = await p.evaluate(() => {
