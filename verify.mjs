@@ -3,14 +3,14 @@ import { chromium, webkit } from 'playwright'
 import { spawn, execFileSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { MUTE_LAUNCH, muteContext } from './mute.mjs'
-import { createWorld } from './shared/track.js?v=5'
-import { setupArena } from './shared/arena.js?v=5'
-import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=5'
-import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=5'
+import { createWorld } from './shared/track.js?v=6'
+import { setupArena } from './shared/arena.js?v=6'
+import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=6'
+import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=6'
 import { play } from './tools/sim.mjs'
 const ROOT = import.meta.dirname
 mkdirSync(ROOT + '/shots', { recursive: true })
-const PORT = 5392
+const PORT = 5402
 const server = spawn(process.execPath, ['server.mjs'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT) } })
 await new Promise(r => setTimeout(r, 400))
 const URL0 = `http://localhost:${PORT}/`

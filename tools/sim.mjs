@@ -1,10 +1,10 @@
 // 自分の遊び方（bot）ごとに、三兄弟に追われながら何秒生き残り何個割れるか。node tools/sim.mjs [回数]
 // 性格: good（上手い: 反応0.15秒・狙い正確）/ human（初めての人: 反応0.45秒・ぶれる・ワイヤーはボタンの自動狙い）/ ground（地面を走るだけ）/ idle
-import { createWorld } from '../shared/track.js?v=5'
-import { setupArena } from '../shared/arena.js?v=5'
-import { createRunner, stepRunner, findAnchor } from '../shared/runner.js?v=5'
-import { BAL, createGame, stepGame, alive, lockTarget } from '../shared/balloons.js?v=5'
-import { createChaser, chaserInput } from '../shared/chaser.js?v=5'
+import { createWorld } from '../shared/track.js?v=6'
+import { setupArena } from '../shared/arena.js?v=6'
+import { createRunner, stepRunner, findAnchor } from '../shared/runner.js?v=6'
+import { BAL, createGame, stepGame, alive, lockTarget } from '../shared/balloons.js?v=6'
+import { createChaser, chaserInput } from '../shared/chaser.js?v=6'
 const N = +(process.argv[2] || 8), only = process.argv[3]
 const world = setupArena(createWorld('city')), dt = 1 / 60
 const ang = a => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a }
