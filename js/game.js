@@ -1,18 +1,18 @@
 // 空中風船割り。WIRE ESCAPE のワイヤーと街で、空に浮かぶ風船を飛び回って割りまくる（空中しっぽ取りのクローンから作り替え）
 // 2026-11-02 本人「ワイヤーで飛び回るのは気持ちいい。しっぽ取りは人には難しい。もっと爽快で気持ちいいものに」
 import * as THREE from 'three'
-import { GAME } from '../shared/config.js?v=8'
-import { createWorld } from '../shared/track.js?v=8'
-import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=8'
-import { buildScene } from './scene.js?v=8'
-import { FX } from './fx.js?v=8'
-import { loadSky, setAniso } from './look.js?v=8'
-import { Q } from './quality.js?v=8'
-import { RunnerModel } from './runnermodel.js?v=8'
-import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=8'
-import { createRunner, stepRunner, findAnchor, rayHit, floorAt, RUN } from '../shared/runner.js?v=8'
-import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=8'
-import { createChaser, chaserInput } from '../shared/chaser.js?v=8'
+import { GAME } from '../shared/config.js?v=9'
+import { createWorld } from '../shared/track.js?v=9'
+import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=9'
+import { buildScene } from './scene.js?v=9'
+import { FX } from './fx.js?v=9'
+import { loadSky, setAniso } from './look.js?v=9'
+import { Q } from './quality.js?v=9'
+import { RunnerModel } from './runnermodel.js?v=9'
+import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=9'
+import { createRunner, stepRunner, findAnchor, rayHit, floorAt, RUN } from '../shared/runner.js?v=9'
+import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=9'
+import { createChaser, chaserInput } from '../shared/chaser.js?v=9'
 
 const $ = id => document.getElementById(id)
 const STEP = GAME.step
@@ -337,7 +337,7 @@ function aimAt(cx, cy) {
 }
 const stick = { x: 0, y: 0, id: null }
 {
-  // 左の広い範囲のどこを触ってもスティックが出る（空中出前・空中キャッチと同じ）
+  // 左スティックは左下に固定（2026-11-03 本人「左スティックは固定で」）。触った所に動かない
   const zone = $('stickZone'), el = $('stick'), knob = el.querySelector('.knob')
   let ox = 0, oy = 0
   const R = () => el.getBoundingClientRect().width / 2
@@ -349,11 +349,13 @@ const stick = { x: 0, y: 0, id: null }
   zone.addEventListener('pointerdown', e => {
     Snd.init(); if (stick.id != null) return
     stick.id = e.pointerId; try { zone.setPointerCapture(e.pointerId) } catch (er) {}
-    const zr = zone.getBoundingClientRect(); ox = e.clientX; oy = e.clientY
-    el.style.left = (ox - zr.left) + 'px'; el.style.top = (oy - zr.top) + 'px'; el.classList.add('held'); upd(e)
+    // 左下に固定したスティック: 触った所に動かさず、円の真ん中からの向きで倒す
+    const sr = el.getBoundingClientRect(); ox = sr.left + sr.width / 2; oy = sr.top + sr.height / 2
+    if (Math.hypot(e.clientX - ox, e.clientY - oy) > sr.width / 2 + 70) { stick.id = null; return }   // 円の少し外まで
+    el.classList.add('held'); upd(e)
   })
   zone.addEventListener('pointermove', e => { if (e.pointerId === stick.id) upd(e) })
-  const end = e => { if (e.pointerId !== stick.id) return; stick.id = null; stick.x = stick.y = 0; knob.style.transform = ''; el.classList.remove('held'); el.style.left = el.style.top = '' }
+  const end = e => { if (e.pointerId !== stick.id) return; stick.id = null; stick.x = stick.y = 0; knob.style.transform = ''; el.classList.remove('held') }
   zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end)
   // 大きいボタン: 前の上へ自動でワイヤー（相手は追わない）。ワイヤー中なら離す、壁に張り付き中なら壁から離れる。跳ぶボタンは無い（2026-11-02 本人）
   for (const b of document.querySelectorAll('.tbtn')) b.addEventListener('pointerdown', e => { e.preventDefault(); Snd.init(); if (b.dataset.k === 'wire') pendingWire = { at: null, key: true } })
