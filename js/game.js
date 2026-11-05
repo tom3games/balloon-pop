@@ -1,18 +1,18 @@
 // 空中風船割り。WIRE ESCAPE のワイヤーと街で、空に浮かぶ風船を飛び回って割りまくる（空中しっぽ取りのクローンから作り替え）
 // 2026-11-02 本人「ワイヤーで飛び回るのは気持ちいい。しっぽ取りは人には難しい。もっと爽快で気持ちいいものに」
 import * as THREE from 'three'
-import { GAME } from '../shared/config.js?v=9'
-import { createWorld } from '../shared/track.js?v=9'
-import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=9'
-import { buildScene } from './scene.js?v=9'
-import { FX } from './fx.js?v=9'
-import { loadSky, setAniso } from './look.js?v=9'
-import { Q } from './quality.js?v=9'
-import { RunnerModel } from './runnermodel.js?v=9'
-import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=9'
-import { createRunner, stepRunner, findAnchor, rayHit, floorAt, RUN } from '../shared/runner.js?v=9'
-import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=9'
-import { createChaser, chaserInput } from '../shared/chaser.js?v=9'
+import { GAME } from '../shared/config.js?v=10'
+import { createWorld } from '../shared/track.js?v=10'
+import { setupArena, AREA, POLE_H } from '../shared/arena.js?v=10'
+import { buildScene } from './scene.js?v=10'
+import { FX } from './fx.js?v=10'
+import { loadSky, setAniso } from './look.js?v=10'
+import { Q } from './quality.js?v=10'
+import { RunnerModel } from './runnermodel.js?v=10'
+import { CharRunnerModel, loadCharAssets, charAssets } from './charmodel.js?v=10'
+import { createRunner, stepRunner, findAnchor, rayHit, floorAt, RUN } from '../shared/runner.js?v=10'
+import { BAL, createGame, stepGame, alive, lockTarget, rankOf, nearestChaser } from '../shared/balloons.js?v=10'
+import { createChaser, chaserInput } from '../shared/chaser.js?v=10'
 
 const $ = id => document.getElementById(id)
 const STEP = GAME.step
@@ -294,8 +294,8 @@ addEventListener('keydown', e => {
 })
 addEventListener('keyup', e => keys.delete(e.code))
 const gest = new Map()
-// スワイプで見回す感度（2026-11-03 本人「ほんとにちょっとだけ高く」で約1.2倍: 0.006→0.0072 / 0.004→0.0048。ワイヤー系全部）
-const LOOK = { yaw: 0.0072, pitch: 0.0048 }
+// スワイプで見回す感度（2026-11-05 本人「ほんの少しだけ上げて」で約1.1倍: 0.0072→0.00792 / 0.0048→0.00528。ワイヤー系全部。その前は 2026-11-03 に 0.006/0.004 から約1.2倍）
+const LOOK = { yaw: 0.00792, pitch: 0.00528 }
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2()
 renderer.domElement.addEventListener('pointerdown', e => {
   Snd.init()

@@ -3,10 +3,10 @@ import { chromium, webkit } from 'playwright'
 import { spawn, execFileSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { MUTE_LAUNCH, muteContext } from './mute.mjs'
-import { createWorld } from './shared/track.js?v=9'
-import { setupArena } from './shared/arena.js?v=9'
-import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=9'
-import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=9'
+import { createWorld } from './shared/track.js?v=10'
+import { setupArena } from './shared/arena.js?v=10'
+import { createRunner, stepRunner, rayHit, findAnchor, RUN } from './shared/runner.js?v=10'
+import { BAL, createGame, stepGame, alive, lockTarget } from './shared/balloons.js?v=10'
 import { play } from './tools/sim.mjs'
 const ROOT = import.meta.dirname
 mkdirSync(ROOT + '/shots', { recursive: true })
@@ -409,7 +409,7 @@ await t('英語に切り替わる', async () => {
   expect(r.start === 'Play' && r.lang === 'en' && /Balloon/.test(r.logo), JSON.stringify(r))
   await p.click('#btnLang')
 })
-await t('スワイプの見回し感度は約1.2倍（横 0.0072・縦 0.0048）。115px 動かすと 0.828rad 回る', async () => {
+await t('スワイプの見回し感度（横 0.00792・縦 0.00528）。115px 動かすと 0.9108rad 回る', async () => {
   await p.click('#btnStart'); await p.evaluate(() => { tt.dbg.pause(true); tt.dbg.sleepBros(true) })
   const r = await p.evaluate(() => {
     tt.cam.hd = 0; tt.cam.pitch = 0.1
@@ -417,7 +417,7 @@ await t('スワイプの見回し感度は約1.2倍（横 0.0072・縦 0.0048）
     ev('pointerdown', 200, 400); ev('pointermove', 215, 400); ev('pointermove', 315, 450); ev('pointerup', 315, 450)
     return { yaw: tt.LOOK.yaw, pitch: tt.LOOK.pitch, hd: +(-tt.cam.hd).toFixed(4), dp: +(tt.cam.pitch - 0.1).toFixed(4) }
   })
-  expect(r.yaw === 0.0072 && r.pitch === 0.0048 && Math.abs(r.hd - 115 * 0.0072) < 1e-6 && Math.abs(r.dp - 50 * 0.0048) < 1e-6, JSON.stringify(r)); return r
+  expect(r.yaw === 0.00792 && r.pitch === 0.00528 && Math.abs(r.hd - 115 * 0.00792) < 1e-6 && Math.abs(r.dp - 50 * 0.00528) < 1e-6, JSON.stringify(r)); return r
 })
 await t('地面ワイヤー（画面）: 空中で道をタップすると地面に掛かる。地面に立っている時と、ワイヤーボタンでは地面に掛からない。建物をタップした時は建物', async () => {
   const r = await p.evaluate(() => {

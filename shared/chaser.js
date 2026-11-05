@@ -1,6 +1,6 @@
 // 風船屋の三兄弟（追う役）の動き。空中しっぽ取りの CPU と同じ考え方: 行きたい向きの前の建物・電柱にワイヤーを掛けてつなぐ
 // 目標は自分（先回りは skill ぶん）。three.js に依存しない
-import { findAnchor } from './runner.js?v=9'
+import { findAnchor } from './runner.js?v=10'
 const ang = a => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a }
 
 export function createChaser(skill = 0.5, seed = 1) {
