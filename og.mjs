@@ -1,4 +1,5 @@
 // SNS 用の画像 og.png（1200x630）。風船の列へワイヤーで振り込む瞬間＋タイトル。node og.mjs
+import './mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium } from 'playwright'
 import { spawn } from 'node:child_process'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
